@@ -1,13 +1,22 @@
+# NGINX proxy configuration in OpenShift
+
+## create ns
+```
 TNS=my-nginx-tests
 oc new-project ${TNS}
+```
 
+## create configs
+```
 oc create cm -n ${TNS} nginx-config-proxy --from-file=nginx.conf=./nginx-proxy.conf
 oc create cm -n ${TNS} nginx-proxy-index-file --from-file=index.html=./index-proxy.html
 
 oc create cm -n ${TNS} nginx-config-target --from-file=nginx.conf=./nginx-target.conf
 oc create cm -n ${TNS} nginx-target-index-file --from-file=index.html=./index-target.html
+```
 
-
+## service accounto to accomodate nginx standard image
+```
 cat << EOF | oc create -f -
 apiVersion: v1
 kind: ServiceAccount
@@ -17,11 +26,15 @@ metadata:
 EOF
 
 oc adm policy add-scc-to-user anyuid -z nginx-anyuid -n ${TNS}
+```
 
-# usa immagine standard
-NGINX_IMAGE=nginx
+## standard image
+```
+export NGINX_IMAGE=nginx
+```
 
-
+## nginx target deployment 
+```
 #--------------------------------------------
 # NGINX
 cat << EOF | oc apply --force -f -
@@ -64,8 +77,10 @@ spec:
 EOF
 
 oc expose deployment nginx
+```
 
-
+## nginx proxy deployment 
+```
 #--------------------------------------------
 # PROXY
 cat << EOF | oc apply --force -f -
@@ -108,19 +123,25 @@ spec:
 EOF
 
 oc expose deployment nginx-proxy
+```
 
+## routes 
+```
 oc expose svc nginx
 oc expose svc nginx-proxy
+```
 
+## tests
+```
+URL="http://"$(oc get route nginx-proxy -o jsonpath='{.spec.host}')
 
-URL=http://$(oc get route nginx-proxy -o jsonpath='{.spec.host}')
-
+# response from proxy server
 curl ${URL} && echo
 
+# response from target server (proxyed)
 curl ${URL}/remote && echo
 
-curl ${URL}/PerformanceLotsOfRules && echo
-
+# response from BAMOE DM application (proxyed) 
 curl -X 'POST' \
   ${URL}/PerformanceLotsOfRules \
   -H 'accept: application/json' \
@@ -134,10 +155,11 @@ curl -X 'POST' \
   "Lev2Input3": 20,
   "Lev2Input4": "HIGH"
 }' | jq .
+```
 
 
-#------------------------------------------------
-
+### update config and restart pods
+```
 oc get cm | grep nginx | awk '{print $1}' | xargs oc delete cm
 
 oc create cm -n ${TNS} nginx-config-proxy --from-file=nginx.conf=./nginx-proxy.conf
@@ -150,3 +172,4 @@ oc scale deployment nginx --replicas=0
 oc scale deployment nginx-proxy --replicas=0
 oc scale deployment nginx --replicas=1
 oc scale deployment nginx-proxy --replicas=1
+```
