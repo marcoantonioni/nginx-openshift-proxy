@@ -15,7 +15,7 @@ oc create cm -n ${TNS} nginx-config-target --from-file=nginx.conf=./nginx-target
 oc create cm -n ${TNS} nginx-target-index-file --from-file=index.html=./index-target.html
 ```
 
-## service accounto to accomodate nginx standard image
+## service account to accomodate nginx standard image
 ```
 cat << EOF | oc create -f -
 apiVersion: v1
