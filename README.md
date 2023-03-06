@@ -133,7 +133,7 @@ oc expose svc nginx-proxy
 
 ## tests
 ```
-URL="http://"$(oc get route nginx-proxy -o jsonpath='{.spec.host}')
+URL="http://"$(oc get route nginx-proxy -n ${TNS} -o jsonpath='{.spec.host}')
 
 # response from proxy server
 curl ${URL} && echo
@@ -142,8 +142,8 @@ curl ${URL} && echo
 curl ${URL}/remote && echo
 
 # response from BAMOE DM application (proxyed) 
-curl -X 'POST' \
-  ${URL}/PerformanceLotsOfRules \
+curl -s -X 'POST' \
+  ${URL}/dm/PerformanceLotsOfRules \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -155,6 +155,28 @@ curl -X 'POST' \
   "Lev2Input3": 20,
   "Lev2Input4": "HIGH"
 }' | jq .
+
+curl -s -X 'POST' \
+  ${URL}/dm/PerformanceAdult \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "age": 20
+}' | jq .
+
+curl -s -X 'POST' \
+  ${URL}/dm/PerformanceConsumeCpuForTime \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "milliseconds": 100
+}' | jq .
+
+time curl -s -H 'accept: application/json' -H 'Content-Type: application/json' -X POST ${URL}/dm/FlightRebooking -d @/tmp/payload | jq .
+
+time curl -s -H 'accept: application/json' -H 'Content-Type: application/json' -X POST ${URL}/dm/FlightRebooking -d @/tmp/payload-big | jq .
+
+
 ```
 
 
@@ -173,3 +195,7 @@ oc scale deployment nginx-proxy --replicas=0
 oc scale deployment nginx --replicas=1
 oc scale deployment nginx-proxy --replicas=1
 ```
+
+Useful refs.
+
+https://dev.to/danielkun/nginx-everything-about-proxypass-2ona
